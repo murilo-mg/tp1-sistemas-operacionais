@@ -1,0 +1,11 @@
+/q1_v1
+/q1_v2
+/q1_v3
+/q2_v1
+/q2_v2
+/q2_v3
+*.o
+*.out
+__pycache__/
+*.pyc
+/saida_*.txt
