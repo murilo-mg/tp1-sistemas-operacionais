@@ -192,15 +192,15 @@ static int inicio_escritores, fim_escritores;
 static int leitores_ativos, leitores_esperando, escritores_esperando, escritor_ativo;
 
 static void entrar(Thread *t) {
-    int bloquear = 0;
-    checar(pthread_mutex_lock(&estado),"lock estado");
-    if (t->tipo == 0) {
-        if (escritor_ativo || escritores_esperando) {
-            fila_leitores[leitores_esperando++]=t;
-            bloquear=1;
+    int bloquear = 0;// e uma variavel que define se a thread continua ou fica bloqueada
+    checar(pthread_mutex_lock(&estado),"lock estado");// estado e um semaforo, e faz "wait(estado)" se tiver liberado ele entra, caso nao, espera
+    if (t->tipo == 0) {// se e um leitor
+        if (escritor_ativo || escritores_esperando) { // se tem escritores ativos ou escritores esperando
+            fila_leitores[leitores_esperando++]=t;//aqui os leitores entram em umsa fila
+            bloquear=1;// thread bloqueada
             registrar(t,"bloqueada: escritor ativo ou esperando; dormindo no semaforo");
-        } else leitores_ativos++;
-    } else {
+        } else leitores_ativos++;//caso nao tenha nenhum escritor ativo ou esperando, o leitor nao fica bloqueado e cont++
+    } else {// ele e um escritor
         if (escritor_ativo || leitores_ativos) {
             fila_escritores[fim_escritores]=t;
             fim_escritores=(fim_escritores+1)%MAX_THREADS;

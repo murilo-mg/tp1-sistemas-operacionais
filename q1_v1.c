@@ -198,26 +198,26 @@ static void esperar_log(sem_t *s, const Thread *t, const char *motivo) {
     }
 }
 
-static void entrar(const Thread *t) {
-    esperar_log(&atendimento,t,"atendimento ocupado");
-    if (t->tipo == 0) {
-        esperar_log(&contagem,t,"contagem ocupada");
-        if (leitores_ativos == 0) esperar_log(&recurso,t,"escritor ativo");
-        leitores_ativos++;
-        postar(&contagem);
-    } else esperar_log(&recurso,t,"registro em uso");
-    postar(&atendimento);
-    registrar(t,"entrou na regiao critica");
+static void entrar(const Thread *t) { // entrar no estado critico
+    esperar_log(&atendimento,t,"atendimento ocupado");// a thread solicita o atendimento 
+    if (t->tipo == 0) { // se a thread eh um leitor
+        esperar_log(&contagem,t,"contagem ocupada");//ela solicita o direito do cont_l
+        if (leitores_ativos == 0) esperar_log(&recurso,t,"escritor ativo"); // se nao tiver nenhum leitor na conta, o leitor obrigatoriamente pede permisao de entrar
+        leitores_ativos++; //  aumenta em 1 os leitores ativos
+        postar(&contagem); // ele da o signal(contagem) deixa a multex do cont disponivel
+    } else esperar_log(&recurso,t,"registro em uso");// se ele nao for um leitor, eh um escritor, e solicita o semaf recurso
+    postar(&atendimento);//ele libera o atendimento.
+    registrar(t,"entrou na regiao critica");// registra que entrou
 }
 
-static void sair(const Thread *t) {
+static void sair(const Thread *t) { // chamado pra sair do estado critico
     registrar(t,"saiu da regiao critica");
-    if (t->tipo == 0) {
-        aguardar(&contagem);
-        leitores_ativos--;
-        if (leitores_ativos == 0) postar(&recurso);
-        postar(&contagem);
-    } else postar(&recurso);
+    if (t->tipo == 0) { // se ele for um leitor
+        aguardar(&contagem);// solicita permissao para o contador, pois como ele esta saindo o contador tem que diminuir
+        leitores_ativos--;// como o leitor esta saindo ele remove -1 do cont de leitores
+        if (leitores_ativos == 0) postar(&recurso);// se ele for o unico leitor que estava dentro, ele obrigatoriamente tem que liberar o recurso
+        postar(&contagem);// libera o semaf de contagem para outro leitor
+    } else postar(&recurso);// libera recurso
 }
 
 static void iniciar_controle(void) {
@@ -258,9 +258,9 @@ static void atualizar(const Thread *t, int valor) {
               (long long)conta.saldo,(int)conta.operacoes,(long long)conta.movimentado);
 }
 
-static void *executar(void *arg) {
-    Thread *t=arg;
-    aguardar(&inicio);
+static void *executar(void *arg) {// executa tudo
+    Thread *t=arg;// thread recebe um argumento
+    aguardar(&inicio);//
     for (int i=0; i<t->operacoes; i++) {
         dormir(t,t->atraso,"intervalo antes da operacao");
         registrar(t,"tentando entrar; operacao=%d",i+1);
@@ -276,7 +276,7 @@ static void *executar(void *arg) {
 int main(int argc, char **argv) {
     configurar(argc,argv);
     if (clock_gettime(CLOCK_MONOTONIC,&instante_inicial) != 0) falhar("clock_gettime");
-    inicializar_sem(&inicio,0);
+    inicializar_sem(&inicio,0); // inicializar semaforo inicio=0
     iniciar_controle();
     conta.saldo=cfg.saldo;
     int n=cfg.leitores+cfg.escritores;
